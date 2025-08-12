@@ -29,22 +29,44 @@ HRESULT WINAPI detourPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
     return oPresent(pSwapChain, SyncInterval, Flags);
 }
 
+// --- Interactive Capture Logic ---
+// We use a static variable to track the key state to only capture once per press.
+static bool g_insert_was_down = false;
+
+void CheckForCapture(ID3D11DeviceContext* pContext)
+{
+    if (GetAsyncKeyState(VK_INSERT) & 0x8000) // Is the INSERT key currently down?
+    {
+        if (!g_insert_was_down) // Was it up before?
+        {
+            g_insert_was_down = true; // Mark it as down
+
+            // This is the moment we capture the shader
+            ID3D11PixelShader* pPixelShader = nullptr;
+            pContext->PSGetShader(&pPixelShader, NULL, 0);
+
+            if (pPixelShader != nullptr)
+            {
+                std::ofstream("hook.log", std::ios::app)
+                    << "SHADER CAPTURADO: " << pPixelShader
+                    << std::endl;
+
+                pPixelShader->Release();
+            }
+        }
+    }
+    else
+    {
+        g_insert_was_down = false; // Key has been released
+    }
+}
+// --- End of Interactive Capture Logic ---
+
+
 void WINAPI detourDrawIndexed(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 {
-    // Get the current pixel shader
-    ID3D11PixelShader* pPixelShader = nullptr;
-    pContext->PSGetShader(&pPixelShader, NULL, 0);
-
-    // Log the call along with the shader pointer, which acts as a unique ID
-    std::ofstream("hook.log", std::ios::app)
-        << "DrawIndexed called. IndexCount: " << IndexCount
-        << ", PixelShader: " << pPixelShader
-        << std::endl;
-
-    // Release the pixel shader resource to avoid memory leaks
-    if (pPixelShader != nullptr) {
-        pPixelShader->Release();
-    }
+    // Check if the user wants to capture the current shader
+    CheckForCapture(pContext);
 
     // Call original DrawIndexed function
     return oDrawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
