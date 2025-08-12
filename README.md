@@ -33,11 +33,11 @@ This project uses CMake to generate build files for your specific compiler and p
     ```
 
 2.  **Run CMake to generate project files:**
-    If you are using Visual Studio 2019 or later, you can run:
+    If you are using Visual Studio 2022, you can run:
     ```bash
-    cmake .. -G "Visual Studio 16 2019" -A x64
+    cmake .. -G "Visual Studio 17 2022" -A x64
     ```
-    (Adjust the generator `-G` and architecture `-A` for your environment). If you have `make` installed, you can just run `cmake ..`.
+    (Adjust the generator `-G` and architecture `-A` for your environment). If you are using a different compiler, you may need to specify a different generator.
 
 3.  **Build the project:**
     If you generated Visual Studio files, you can open the `.sln` file in the `build` directory and compile from there. Alternatively, you can build from the command line:

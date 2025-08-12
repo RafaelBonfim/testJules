@@ -62,7 +62,8 @@
 #pragma pack(push, 1)
 typedef struct _JMP_ABS
 {
-    UINT8  opcode;  // FF25
+    UINT8  opcode1; // FF
+    UINT8  opcode2; // 25
     UINT32 operand; // Relative address.
     UINT64 address;
 } JMP_ABS, *PJMP_ABS;
@@ -70,19 +71,21 @@ typedef struct _JMP_ABS
 // CALL [RIP+address]
 typedef struct _CALL_ABS
 {
-    UINT8  opcode1; // FF15
-    UINT32 operand; // Relative address.
-    UINT8  opcode2; // EB 08
-    UINT8  operand2;
+    UINT8  opcode1_1; // FF
+    UINT8  opcode1_2; // 15
+    UINT32 operand;   // Relative address.
+    UINT8  opcode2;   // EB
+    UINT8  operand2;  // 08
     UINT64 address;
 } CALL_ABS, *PCALL_ABS;
 
 // Jcc [RIP+address]
 typedef struct _JCC_ABS
 {
-    UINT8  opcode;  // 7* 0E
-    UINT8  operand;
-    UINT8  opcode2; // FF25
+    UINT8  opcode;    // 7*
+    UINT8  operand;   // 0E
+    UINT8  opcode2_1; // FF
+    UINT8  opcode2_2; // 25
     UINT32 operand2;
     UINT64 address;
 } JCC_ABS, *PJCC_ABS;
@@ -299,8 +302,8 @@ BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
                 UINT8 cond = ((hs.opcode != 0x0F ? hs.opcode : hs.opcode2) & 0x0F);
 #if defined(_M_X64) || defined(__x86_64__)
                 // Invert the condition in x64 mode to simplify the conditional jump logic.
-                jcc.opcode  = 0x71 ^ cond;
-                jcc.address = dest;
+                jcc.opcode1[0] = 0x71 ^ cond;
+                jcc.address    = dest;
 #else
                 jcc.opcode1 = 0x80 | cond;
                 jcc.operand = (UINT32)(dest - (pNewInst + sizeof(jcc)));
