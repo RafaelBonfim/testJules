@@ -5,73 +5,75 @@
 #include <fstream>
 #include "hooks.h"
 #include "minhook/include/MinHook.h"
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx11.h"
 
 // Function types
 typedef HRESULT(WINAPI* Present_t)(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
-typedef void(WINAPI* DrawIndexed_t)(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+WNDPROC oWndProc;
 
 // Pointers to original functions
 Present_t oPresent = nullptr;
-DrawIndexed_t oDrawIndexed = nullptr;
+
+// State
+static bool show_menu = true;
+static bool imgui_init = false;
+static HWND window = NULL;
+
+LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    if (true && ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
+        return true;
+
+    return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
+}
 
 // Detour functions
 HRESULT WINAPI detourPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 {
-    static bool init = false;
-    if (!init)
+    if (!imgui_init)
     {
-        // One-time initialization code here if needed
-        std::ofstream("hook.log", std::ios::app) << "Present hook called for the first time." << std::endl;
-        init = true;
+        ID3D11Device* pDevice = NULL;
+        ID3D11DeviceContext* pContext = NULL;
+        pSwapChain->GetDevice(__uuidof(ID3D11Device), (void**)&pDevice);
+        pDevice->GetImmediateContext(&pContext);
+
+        DXGI_SWAP_CHAIN_DESC sd;
+        pSwapChain->GetDesc(&sd);
+        window = sd.OutputWindow;
+
+        ImGui::CreateContext();
+        ImGui_ImplWin32_Init(window);
+        ImGui_ImplDX11_Init(pDevice, pContext);
+
+        oWndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)WndProc);
+
+        imgui_init = true;
+        std::ofstream("hook.log", std::ios::app) << "ImGui initialized." << std::endl;
     }
 
-    // Call original Present function
+    if (GetAsyncKeyState(VK_INSERT) & 1)
+    {
+        show_menu = !show_menu;
+    }
+
+    ImGui_ImplDX11_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+
+    if (show_menu)
+    {
+        ImGui::Begin("ImGui Menu");
+        ImGui::Text("Hello, world!");
+        ImGui::End();
+    }
+
+    ImGui::Render();
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
     return oPresent(pSwapChain, SyncInterval, Flags);
 }
-
-// --- Interactive Capture Logic ---
-// We use a static variable to track the key state to only capture once per press.
-static bool g_insert_was_down = false;
-
-void CheckForCapture(ID3D11DeviceContext* pContext)
-{
-    if (GetAsyncKeyState(VK_INSERT) & 0x8000) // Is the INSERT key currently down?
-    {
-        if (!g_insert_was_down) // Was it up before?
-        {
-            g_insert_was_down = true; // Mark it as down
-
-            // This is the moment we capture the shader
-            ID3D11PixelShader* pPixelShader = nullptr;
-            pContext->PSGetShader(&pPixelShader, NULL, 0);
-
-            if (pPixelShader != nullptr)
-            {
-                std::ofstream("hook.log", std::ios::app)
-                    << "SHADER CAPTURADO: " << pPixelShader
-                    << std::endl;
-
-                pPixelShader->Release();
-            }
-        }
-    }
-    else
-    {
-        g_insert_was_down = false; // Key has been released
-    }
-}
-// --- End of Interactive Capture Logic ---
-
-
-void WINAPI detourDrawIndexed(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
-{
-    // Check if the user wants to capture the current shader
-    CheckForCapture(pContext);
-
-    // Call original DrawIndexed function
-    return oDrawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
-}
-
 
 void Hook()
 {
@@ -102,11 +104,7 @@ void Hook()
 
     // Get the vtable addresses
     void** pSwapChainVTable = *(void***)pSwapChain;
-    void** pContextVTable = *(void***)pContext;
-
-    // Get the original function pointers from the vtable
     oPresent = (Present_t)pSwapChainVTable[8];
-    oDrawIndexed = (DrawIndexed_t)pContextVTable[12];
 
     // Release the dummy device and swap chain
     pSwapChain->Release();
@@ -125,10 +123,6 @@ void Hook()
         std::ofstream("hook.log") << "Failed to create hook for Present." << std::endl;
         return;
     }
-    if (MH_CreateHook(oDrawIndexed, &detourDrawIndexed, (void**)&oDrawIndexed) != MH_OK) {
-        std::ofstream("hook.log") << "Failed to create hook for DrawIndexed." << std::endl;
-        return;
-    }
 
     // Enable hooks
     if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
@@ -142,6 +136,8 @@ void Hook()
 void Unhook()
 {
     std::ofstream("hook.log", std::ios::app) << "Unhooking..." << std::endl;
+    if (oWndProc)
+        SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)oWndProc);
     MH_DisableHook(MH_ALL_HOOKS);
     MH_Uninitialize();
 }

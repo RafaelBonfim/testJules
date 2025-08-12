@@ -18,12 +18,21 @@ add_library(dx11hook SHARED
     minhook/src/trampoline.c
     minhook/src/hde/hde32.c
     minhook/src/hde/hde64.c
+    # ImGui library files
+    src/imgui/imgui.cpp
+    src/imgui/imgui_demo.cpp
+    src/imgui/imgui_draw.cpp
+    src/imgui/imgui_tables.cpp
+    src/imgui/imgui_widgets.cpp
+    src/imgui/imgui_impl_win32.cpp
+    src/imgui/imgui_impl_dx11.cpp
 )
 
 # Add include directories
 target_include_directories(dx11hook PUBLIC
     ./
     minhook/include
+    src/imgui
 )
 
 # Define preprocessor definitions based on architecture
