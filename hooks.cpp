@@ -31,9 +31,20 @@ HRESULT WINAPI detourPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 
 void WINAPI detourDrawIndexed(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 {
-    // For now, just log the call to show it's working.
-    // In the future, we would inspect buffers and shaders here to find text.
-    std::ofstream("hook.log", std::ios::app) << "DrawIndexed called. IndexCount: " << IndexCount << std::endl;
+    // Get the current pixel shader
+    ID3D11PixelShader* pPixelShader = nullptr;
+    pContext->PSGetShader(&pPixelShader, NULL, 0);
+
+    // Log the call along with the shader pointer, which acts as a unique ID
+    std::ofstream("hook.log", std::ios::app)
+        << "DrawIndexed called. IndexCount: " << IndexCount
+        << ", PixelShader: " << pPixelShader
+        << std::endl;
+
+    // Release the pixel shader resource to avoid memory leaks
+    if (pPixelShader != nullptr) {
+        pPixelShader->Release();
+    }
 
     // Call original DrawIndexed function
     return oDrawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
