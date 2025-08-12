@@ -302,8 +302,8 @@ BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
                 UINT8 cond = ((hs.opcode != 0x0F ? hs.opcode : hs.opcode2) & 0x0F);
 #if defined(_M_X64) || defined(__x86_64__)
                 // Invert the condition in x64 mode to simplify the conditional jump logic.
-                jcc.opcode1[0] = 0x71 ^ cond;
-                jcc.address    = dest;
+                jcc.opcode  = 0x71 ^ cond;
+                jcc.address = dest;
 #else
                 jcc.opcode1 = 0x80 | cond;
                 jcc.operand = (UINT32)(dest - (pNewInst + sizeof(jcc)));
