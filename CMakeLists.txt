@@ -35,7 +35,8 @@ target_include_directories(dx11hook PUBLIC
     src/imgui
 )
 
-# Define preprocessor definitions based on architecture
+# Define preprocessor definitions
+target_compile_definitions(dx11hook PRIVATE IMGUI_VERSION="1.90.8 WIP")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     target_compile_definitions(dx11hook PRIVATE _M_X64)
 else()
