@@ -23,7 +23,7 @@ static bool imgui_init = false;
 static HWND window = NULL;
 
 LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    if (true && ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
+    if (show_menu && ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
         return true;
 
     return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
@@ -138,6 +138,14 @@ void Unhook()
     std::ofstream("hook.log", std::ios::app) << "Unhooking..." << std::endl;
     if (oWndProc)
         SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)oWndProc);
+
+    if (imgui_init)
+    {
+        ImGui_ImplDX11_Shutdown();
+        ImGui_ImplWin32_Shutdown();
+        ImGui::DestroyContext();
+    }
+
     MH_DisableHook(MH_ALL_HOOKS);
     MH_Uninitialize();
 }
