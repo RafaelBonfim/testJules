@@ -1,6 +1,8 @@
 // dear imgui, v1.90.8 WIP
 // (main source code)
 
+#define IMGUI_VERSION "1.90.8 WIP"
+
 // Help:
 // - Read FAQ at http://dearimgui.com/faq
 // - Newcomers, read 'Programmer guide' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
